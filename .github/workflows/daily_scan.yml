@@ -1,0 +1,57 @@
+name: Daily .ee Domain Drop Scan
+
+# ---------------------------------------------------------------------------
+# Triggers:
+#   * Scheduled daily at 04:00 UTC.
+#   * Manual "Run workflow" button via workflow_dispatch (handy for testing).
+# ---------------------------------------------------------------------------
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+# The final step pushes the updated state file back to the repo, so the
+# default GITHUB_TOKEN needs write access to repository contents.
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install system dependencies (dig / dnsutils)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dnsutils
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Run domain processor
+        env:
+          OPENPAGERANK_API_KEY: ${{ secrets.OPENPAGERANK_API_KEY }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+        run: python process_domains.py
+
+      - name: Commit updated tracking state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only commit if the state file actually changed, to avoid empty commits.
+          if [ -n "$(git status --porcelain active_domains.txt)" ]; then
+            git add active_domains.txt
+            git commit -m "Update active tracking state [skip ci]"
+            git push
+          else
+            echo "No changes to active_domains.txt — skipping commit."
+          fi
