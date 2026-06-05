@@ -29,6 +29,7 @@ import os
 import re
 import sys
 import json
+import time
 import subprocess
 from datetime import datetime, timezone
 
@@ -42,6 +43,8 @@ STATE_FILE = "active_domains.txt"            # local snapshot of yesterday's dom
 ZONE_SERVER = "zone.internet.ee"             # Estonian registry AXFR server
 ZONE_NAME = "ee."                            # the zone we transfer
 AXFR_TIMEOUT = 600                           # seconds to allow the transfer to run
+AXFR_RETRIES = 3                             # how many times to attempt the transfer
+AXFR_RETRY_DELAY = 15                        # seconds to wait between attempts
 
 OPR_ENDPOINT = "https://openpagerank.com/api/v1.0/getPageRank"
 OPR_BATCH_SIZE = 100                         # OpenPageRank caps each call at 100 domains
@@ -67,27 +70,54 @@ VOWELS = set("aeiouõäöüy")
 def fetch_zone() -> str:
     """Run a full AXFR zone transfer and return the raw text output.
 
-    The Estonian registry permits anonymous AXFR from `zone.internet.ee`,
-    so a runner inside a GitHub Actions VM is served without authentication.
+    The Estonian registry permits anonymous AXFR from `zone.internet.ee`.
+
+    Hardening for cloud CI runners (e.g. GitHub Actions):
+      * `-4` forces IPv4. GitHub-hosted runners frequently have broken or
+        missing IPv6, and without this `dig` may attempt an IPv6 route and
+        stall, returning "no reply from server" (exit code 9).
+      * `+time=15 +tries=1` keeps each attempt from hanging too long.
+      * We retry a few times, because a single transient drop is common and a
+        later attempt often succeeds.
+
+    Returns the raw zone text, or "" if every attempt failed.
     """
-    cmd = ["dig", f"@{ZONE_SERVER}", ZONE_NAME, "axfr"]
-    print(f"[zone] Requesting AXFR: {' '.join(cmd)}")
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=AXFR_TIMEOUT,
-        )
-    except subprocess.TimeoutExpired:
-        print(f"[zone] ERROR: AXFR timed out after {AXFR_TIMEOUT}s.")
-        return ""
+    cmd = [
+        "dig", "-4", "+time=15", "+tries=1",
+        f"@{ZONE_SERVER}", ZONE_NAME, "axfr",
+    ]
 
-    if result.returncode != 0:
-        print(f"[zone] ERROR: dig exited {result.returncode}. stderr:\n{result.stderr}")
-        return ""
+    for attempt in range(1, AXFR_RETRIES + 1):
+        print(f"[zone] AXFR attempt {attempt}/{AXFR_RETRIES}: {' '.join(cmd)}")
+        result = None
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=AXFR_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"[zone] attempt {attempt}: timed out after {AXFR_TIMEOUT}s.")
 
-    return result.stdout
+        # Success = clean exit AND we actually received content.
+        if result is not None and result.returncode == 0 and result.stdout.strip():
+            print(f"[zone] attempt {attempt}: transfer succeeded.")
+            return result.stdout
+
+        if result is not None:
+            stderr = result.stderr.strip()
+            print(
+                f"[zone] attempt {attempt}: dig exited {result.returncode}. "
+                f"stderr: {stderr!r}"
+            )
+
+        if attempt < AXFR_RETRIES:
+            print(f"[zone] retrying in {AXFR_RETRY_DELAY}s...")
+            time.sleep(AXFR_RETRY_DELAY)
+
+    print("[zone] ERROR: all AXFR attempts failed.")
+    return ""
 
 
 # Matches a zone-file owner token that is EXACTLY a second-level .ee domain,
