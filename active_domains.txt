@@ -4100,6 +4100,7 @@
 2517.ee
 25176.ee
 2518.ee
+25180.ee
 2519.ee
 252.ee
 2520.ee
@@ -5280,6 +5281,7 @@
 32559.ee
 3256.ee
 3257.ee
+32570.ee
 3258.ee
 3259.ee
 326.ee
@@ -8675,6 +8677,7 @@
 5193.ee
 5194.ee
 5195.ee
+51957.ee
 5196.ee
 5197.ee
 5198.ee
@@ -9822,6 +9825,7 @@
 5922.ee
 59226.ee
 5923.ee
+59234.ee
 592387.ee
 5924.ee
 5925.ee
@@ -10705,6 +10709,7 @@
 6433.ee
 6434.ee
 6435.ee
+64357.ee
 6436.ee
 64366.ee
 64369.ee
@@ -11883,6 +11888,7 @@
 7051.ee
 70516.ee
 7052.ee
+70520.ee
 7053.ee
 7054.ee
 7055.ee
@@ -11934,6 +11940,7 @@
 7091.ee
 7092.ee
 7093.ee
+70933.ee
 7094.ee
 7095.ee
 7096.ee
@@ -16005,6 +16012,7 @@
 9742.ee
 9743.ee
 9744.ee
+97448.ee
 9745.ee
 9746.ee
 9747.ee
@@ -51068,6 +51076,7 @@ ekka.ee
 ekkaubandus.ee
 ekke.ee
 ekker.ee
+ekki.ee
 ekkinnisvara.ee
 ekkk.ee
 ekkl.ee
@@ -99448,9 +99457,12 @@ lextarkus.ee
 lexteenused.ee
 lexu.ee
 lexus.ee
+lexusamserv.ee
 lexuseabi.ee
 lexustallinn.ee
+lexustallinntuleviku.ee
 lexustartu.ee
+lexustuleviku.ee
 lexy.ee
 leyakoreya.ee
 leylalasberg.ee
